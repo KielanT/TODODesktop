@@ -9,9 +9,13 @@ project "TODODesktop"
 
    IncludeDir["curl"] = "external/curl/include"
    IncludeDir["nlohmann"] = "external/nlohmann"
+   IncludeDir["websocketpp"] = "external/websocketpp"
+   IncludeDir["boost"] = "external/boost_1_82_0"
+   
 
    LibDir = {}
    LibDir["curl"] = "external/curl/lib"
+   LibDir["boost"] = "external/boost_1_82_0/stage/lib"
 
    includedirs
    {
@@ -24,6 +28,8 @@ project "TODODesktop"
       "%{IncludeDir.VulkanSDK}",
       "%{IncludeDir.curl}",
       "%{IncludeDir.nlohmann}",
+      "%{IncludeDir.websocketpp}",
+      "%{IncludeDir.boost}",
 
       "../../TODOShared/"
    }
@@ -31,12 +37,14 @@ project "TODODesktop"
    libdirs
    {
       "%{LibDir.curl}",
+      "%{LibDir.boost}",
    }
 
    links
    {
        "Walnut",
-      "libcurl.lib"
+      "libcurl.lib",
+      "libboost_random-vc143-mt-x64-1_82.lib"
    }
 
    targetdir ("../bin/" .. outputdir .. "/%{prj.name}")
