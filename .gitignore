@@ -13,3 +13,4 @@ bin-int/
 !vendor/bin
 
 external/
+vendor/
