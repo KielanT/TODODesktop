@@ -6,11 +6,11 @@
 
 
 #include "Utility.h"
+#include <imgui_internal.h>
 
 
 void UserInterfaceLayer::OnAttach()
 {
-  
 }
 
 void UserInterfaceLayer::OnDetach()
@@ -20,26 +20,149 @@ void UserInterfaceLayer::OnDetach()
 
 void UserInterfaceLayer::OnUIRender()
 {
-    /*const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(viewport->WorkPos);
-    ImGui::SetNextWindowSize(viewport->WorkSize);
 
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize;
-    ImGui::Begin("main", NULL, window_flags);
+    ImGuiWindowClass window_class;
+    window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
+    ImGui::SetNextWindowClass(&window_class);
 
+    ImGui::Begin("main");
     if (ImGui::Button("New List"))
     {
-
+       ImGui::OpenPopup("Create New List");
     }
 
-    ImGui::End();*/
+    OnCreateNewList();
 
-    ImGui::ShowDemoWindow();
+    if (ImGui::BeginListBox("##ListsList", ImGui::GetContentRegionAvail()))
+    {
+        for (int n = 0; n < ListVector.size(); n++)
+        {
+            const bool isSelected = (currentSelectedList == n);
+            if (ImGui::Selectable(ListVector[n].Name.c_str(), isSelected))
+                currentSelectedList = n;
+
+            if (isSelected)
+                ImGui::SetItemDefaultFocus();
+        }
+
+        ImGui::EndListBox();
+    }
+
+
+    ImGui::End();
+
+    ImGui::SetNextWindowClass(&window_class);
+    ImGui::Begin("TWO");
+    if (ImGui::Button("Add Task"))
+    {
+        ImGui::OpenPopup("Add Task");
+    }
+
+    OnCreateAddTask();
+
+    if (ImGui::BeginListBox("##TasksList", ImGui::GetContentRegionAvail()))
+    {
+        if (!ListVector.empty())
+        {
+            for (int n = 0; n < ListVector[currentSelectedList].TaskVector.size(); n++)
+            {
+                ImGui::Selectable(ListVector[currentSelectedList].TaskVector[n].Name.c_str(), false); // TODO make a list item with checkbox
+            }
+        }
+
+        ImGui::EndListBox();
+    }
+
+    ImGui::End();
+
+   //ImGui::ShowDemoWindow();
+}
+
+void UserInterfaceLayer::OnCreateNewList()
+{
+    std::string result = "";
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    if (ImGui::BeginPopupModal("Create New List", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove))
+    {
+        ImGui::Text("Choose a name");
+        ImGui::Separator();
+
+        
+        static char buf[64] = "";
+        ImGui::InputText("###", buf, 64);
+
+        if (ImGui::Button("Add"))
+        {
+            result = buf; 
+            buf[0] = '\0';
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Cancel"))
+        {
+            buf[0] = '\0';
+            ImGui::CloseCurrentPopup();
+        }
+        
+
+        ImGui::EndPopup();
+    }
+    
+    if (!result.empty())
+    {
+        // Create list
+        ListVector.push_back(result);
+    }
+}
+
+void UserInterfaceLayer::OnCreateAddTask()
+{
+    std::string result = "";
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    if (ImGui::BeginPopupModal("Add Task", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove))
+    {
+        ImGui::Text("Choose a name");
+        ImGui::Separator();
+
+
+        static char buf[64] = "";
+        ImGui::InputText("###", buf, 64);
+
+        if (ImGui::Button("Add"))
+        {
+            result = buf;
+            buf[0] = '\0';
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Cancel"))
+        {
+            buf[0] = '\0';
+            ImGui::CloseCurrentPopup();
+        }
+
+
+        ImGui::EndPopup();
+    }
+
+    if (!result.empty())
+    {
+        // Create list
+        ListVector[currentSelectedList].TaskVector.push_back(result);
+    }
 }
 
 void UserInterfaceLayer::CreateNewFile()
 {
-    CURL* curl = curl_easy_init();
+    /*CURL* curl = curl_easy_init();
 
     std::string str = m_URL + "/newList";
 
@@ -57,5 +180,5 @@ void UserInterfaceLayer::CreateNewFile()
         std::cerr << "POST request failed: " << curl_easy_strerror(res) << std::endl;
     }
 
-    curl_easy_cleanup(curl);
+    curl_easy_cleanup(curl);*/
 }

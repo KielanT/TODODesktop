@@ -11,6 +11,7 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 	Walnut::ApplicationSpecification spec;
 	spec.Name = "TODO List Desktop";
 	spec.CustomTitlebar = true;
+	spec.CenterWindow = true;
 
 	Walnut::Application* app = new Walnut::Application(spec);
 	std::shared_ptr<UserInterfaceLayer> exampleLayer = std::make_shared<UserInterfaceLayer>();
