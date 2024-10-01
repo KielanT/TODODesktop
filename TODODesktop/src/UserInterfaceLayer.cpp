@@ -53,7 +53,9 @@ void UserInterfaceLayer::OnAttach()
             {
                 for (const auto& task : data["tasks"])
                 {
-                    list.TaskVector.push_back(task.get<std::string>());
+                    Task newTask(task["taskName"].get<std::string>());
+                    newTask.Complete = task["complete"];
+                    list.TaskVector.push_back(newTask);
                 }
             }
 
@@ -125,10 +127,22 @@ void UserInterfaceLayer::OnUIRender()
 
     if (ImGui::BeginListBox("##TasksList", ImGui::GetContentRegionAvail()))
     {
-        if (!ListVector.empty())
+        if (!ListVector.empty() && currentSelectedList > -1)
         {
             for (int n = 0; n < ListVector[currentSelectedList].TaskVector.size(); n++)
             {
+                bool currentState = ListVector[currentSelectedList].TaskVector[n].Complete;
+
+                ImGui::Checkbox(("###" + ListVector[currentSelectedList].TaskVector[n].Name).c_str(), &ListVector[currentSelectedList].TaskVector[n].Complete);
+                
+                if (currentState != ListVector[currentSelectedList].TaskVector[n].Complete)
+                {
+                    // Send to sql
+                    OnCheckboxUpdate(n, ListVector[currentSelectedList].TaskVector[n].Complete);
+                }
+
+                ImGui::SameLine();
+
                 const bool isSelected = (currentSelectedTask == n);
                 if (ImGui::Selectable(ListVector[currentSelectedList].TaskVector[n].Name.c_str(), isSelected)) // TODO make a list item with checkbox
                     currentSelectedTask = n;
@@ -153,7 +167,7 @@ void UserInterfaceLayer::OnUIRender()
 
     ImGui::End();
 
-    ImGui::ShowDemoWindow();
+    //ImGui::ShowDemoWindow();
 }
 
 void UserInterfaceLayer::OnCreateNewList()
@@ -378,4 +392,35 @@ void UserInterfaceLayer::DeleteTask(int task)
     }
 
     
+}
+
+void UserInterfaceLayer::OnCheckboxUpdate(int index, bool isChecked)
+{
+    CURL* curl = curl_easy_init();
+
+    std::string str = m_URL + "/updateTaskComplete";
+
+    nlohmann::json jsonPayload;
+    jsonPayload["email"] = "hello@world.com";
+    jsonPayload["list"] = ListVector[currentSelectedList].Name;
+    jsonPayload["name"] = ListVector[currentSelectedList].TaskVector[index].Name;
+    jsonPayload["complete"] = isChecked;
+    std::string postFields = jsonPayload.dump();
+
+    curl_easy_setopt(curl, CURLOPT_URL, str.c_str());
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postFields.c_str());
+
+    std::string responseData{ "" };
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseData);
+
+    CURLcode res = curl_easy_perform(curl);
+
+    if (res != CURLE_OK)
+    {
+        std::cerr << "PATCH request failed: " << curl_easy_strerror(res) << std::endl;
+    }
+
+    curl_easy_cleanup(curl);
 }

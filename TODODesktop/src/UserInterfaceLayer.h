@@ -14,6 +14,7 @@ struct Task
 	}
 
 	std::string Name;
+	bool Complete = false;
 };
 
 struct TODOList
@@ -39,6 +40,8 @@ private:
 
 	void DeleteList(int index);
 	void DeleteTask(int task);
+
+	void OnCheckboxUpdate(int index, bool isChecked);
 
 private:
 	const std::string m_URL{ "http://192.168.0.50" };
