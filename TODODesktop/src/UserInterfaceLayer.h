@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include "Walnut/Layer.h"
 #include "imgui.h"
@@ -17,7 +18,7 @@ struct Task
 
 struct TODOList
 {
-	TODOList(std::string& name) : Name(name)
+	TODOList(const std::string& name) : Name(name)
 	{}
 
 	std::string Name{ "" };
@@ -35,12 +36,14 @@ public:
 private:
 	void OnCreateNewList();
 	void OnCreateAddTask();
-	void CreateNewFile();
 
+	void DeleteList(int index);
+	void DeleteTask(int task);
 
 private:
 	const std::string m_URL{ "http://192.168.0.50" };
 
 	std::vector<TODOList> ListVector;
 	int currentSelectedList = 0; // TODO save in file
+	int currentSelectedTask = -1;
 };
