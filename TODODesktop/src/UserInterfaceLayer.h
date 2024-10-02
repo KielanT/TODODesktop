@@ -8,25 +8,8 @@
 #include "imgui.h"
 #include "misc/cpp/imgui_stdlib.h"
 
-struct Task
-{
-	Task(std::string& name) : Name(name)
-	{
-	}
+#include "TODOList.h"
 
-	std::string Name{ "" };
-	std::string TaskDesc{ "" };
-	bool Complete{ false };
-};
-
-struct TODOList
-{
-	TODOList(const std::string& name) : Name(name)
-	{}
-
-	std::string Name{ "" };
-	std::vector<Task> TaskVector;
-};
 
 class UserInterfaceLayer : public Walnut::Layer
 {
@@ -55,9 +38,7 @@ private:
 private:
 	const std::string m_URL{ "http://192.168.0.50" };
 
-	std::vector<TODOList> ListVector;
-	int currentSelectedList = -1; // TODO save in file
-	int currentSelectedTask = -1;
-
 	bool showTaskProperties = false;
+
+	TODOListManager m_TODOList;
 };

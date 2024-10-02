@@ -4,10 +4,10 @@
 #include "curl/curl.h"
 #include "json.hpp"
 
-
-#include "Utility.h"
 #include <imgui_internal.h>
 #include "HTTPRequest.h"
+
+
 
 void UserInterfaceLayer::OnAttach()
 {
@@ -49,14 +49,14 @@ void UserInterfaceLayer::RenderList()
 
     if (ImGui::BeginListBox("##ListsList", ImGui::GetContentRegionAvail()))
     {
-        for (int n = 0; n < ListVector.size(); n++)
+        for (int n = 0; n < m_TODOList.ListVector.size(); n++)
         {
-            const bool isSelected = (currentSelectedList == n);
-            if (ImGui::Selectable(ListVector[n].Name.c_str(), isSelected))
+            const bool isSelected = (m_TODOList.currentSelectedList == n);
+            if (ImGui::Selectable(m_TODOList.ListVector[n].Name.c_str(), isSelected))
             {
-                currentSelectedList = n;
+                m_TODOList.currentSelectedList = n;
                 showTaskProperties = false;
-                currentSelectedTask = -1;
+                m_TODOList.currentSelectedTask = -1;
 
             }
 
@@ -86,7 +86,7 @@ void UserInterfaceLayer::RenderTask()
     window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
     ImGui::SetNextWindowClass(&window_class);
     ImGui::Begin("TWO");
-    if (ImGui::Button("Add Task") && currentSelectedList > -1)
+    if (ImGui::Button("Add Task") && m_TODOList.currentSelectedList > -1)
     {
         ImGui::OpenPopup("Add Task");
     }
@@ -95,25 +95,25 @@ void UserInterfaceLayer::RenderTask()
 
     if (ImGui::BeginListBox("##TasksList", ImGui::GetContentRegionAvail()))
     {
-        if (!ListVector.empty() && currentSelectedList > -1)
+        if (!m_TODOList.ListVector.empty() && m_TODOList.currentSelectedList > -1)
         {
-            for (int n = 0; n < ListVector[currentSelectedList].TaskVector.size(); n++)
+            for (int n = 0; n < m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector.size(); n++)
             {
-                bool currentState = ListVector[currentSelectedList].TaskVector[n].Complete;
+                bool currentState = m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[n].Complete;
 
-                ImGui::Checkbox(("###" + ListVector[currentSelectedList].TaskVector[n].Name).c_str(), &ListVector[currentSelectedList].TaskVector[n].Complete);
+                ImGui::Checkbox(("###" + m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[n].Name).c_str(), &m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[n].Complete);
 
-                if (currentState != ListVector[currentSelectedList].TaskVector[n].Complete)
+                if (currentState != m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[n].Complete)
                 {
                     // Send to sql
-                    OnCheckboxUpdate(n, ListVector[currentSelectedList].TaskVector[n].Complete);
+                    OnCheckboxUpdate(n, m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[n].Complete);
                 }
 
                 ImGui::SameLine();
 
-                const bool isSelected = (currentSelectedTask == n);
-                if (ImGui::Selectable(ListVector[currentSelectedList].TaskVector[n].Name.c_str(), isSelected)) // TODO make a list item with checkbox
-                    currentSelectedTask = n;
+                const bool isSelected = (m_TODOList.currentSelectedTask == n);
+                if (ImGui::Selectable(m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[n].Name.c_str(), isSelected)) // TODO make a list item with checkbox
+                    m_TODOList.currentSelectedTask = n;
 
                 if (ImGui::BeginPopupContextItem())
                 {
@@ -137,7 +137,7 @@ void UserInterfaceLayer::RenderTask()
 
 void UserInterfaceLayer::RenderTaskProperties()
 {
-    if (currentSelectedTask > -1)
+    if (m_TODOList.currentSelectedTask > -1)
         showTaskProperties = true;
 
     if (showTaskProperties)
@@ -159,22 +159,22 @@ void UserInterfaceLayer::RenderTaskProperties()
             ImGui::PopStyleColor();
             ImGui::Separator();
 
-            ImGui::Text(ListVector[currentSelectedList].TaskVector[currentSelectedTask].Name.c_str());
+            ImGui::Text(m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[m_TODOList.currentSelectedTask].Name.c_str());
 
             auto size = ImGui::GetContentRegionAvail();
-            size.y = ImGui::CalcTextSize(ListVector[currentSelectedList].TaskVector[currentSelectedTask].Name.c_str()).y + 50;
+            size.y = ImGui::CalcTextSize(m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[m_TODOList.currentSelectedTask].Name.c_str()).y + 50;
             ImGui::Text("Description: ");
-            ImGui::InputTextMultiline("Description", &ListVector[currentSelectedList].TaskVector[currentSelectedTask].TaskDesc, size);
+            ImGui::InputTextMultiline("Description", &m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[m_TODOList.currentSelectedTask].TaskDesc, size);
             if (ImGui::IsItemDeactivatedAfterEdit())
             {
-                OnDescUpdate(currentSelectedList, currentSelectedTask);
+                OnDescUpdate(m_TODOList.currentSelectedList, m_TODOList.currentSelectedTask);
             }
         }
         ImGui::End();
     }
 
     if (showTaskProperties == false)
-        currentSelectedTask = -1;
+        m_TODOList.currentSelectedTask = -1;
 }
 
 void UserInterfaceLayer::GetList()
@@ -200,7 +200,7 @@ void UserInterfaceLayer::GetList()
                 }
             }
 
-            ListVector.push_back(list);
+            m_TODOList.ListVector.push_back(list);
         }
     }
 }
@@ -224,7 +224,7 @@ void UserInterfaceLayer::OnCreateNewList()
         {
             result = buf; 
             buf[0] = '\0';
-            currentSelectedList++;
+            m_TODOList.currentSelectedList++;
             ImGui::CloseCurrentPopup();
         }
 
@@ -247,7 +247,7 @@ void UserInterfaceLayer::OnCreateNewList()
 
         nlohmann::json json = HTTPRequest::POST(m_URL + "/newList", jsonPayload);
         // TODO if response is good
-        ListVector.push_back(result);
+        m_TODOList.ListVector.push_back(result);
 
     }
 }
@@ -290,51 +290,51 @@ void UserInterfaceLayer::OnCreateAddTask()
     {
         nlohmann::json jsonPayload;
         jsonPayload["email"] = "hello@world.com";
-        jsonPayload["list"] = ListVector[currentSelectedList].Name;
+        jsonPayload["list"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].Name;
         jsonPayload["name"] = result;
 
         nlohmann::json json = HTTPRequest::POST(m_URL + "/newTask", jsonPayload);
         // TODO if response is okay then add to the list
-        ListVector[currentSelectedList].TaskVector.push_back(result);
+        m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector.push_back(result);
     }
 }
 
 void UserInterfaceLayer::DeleteList(int index)
 {
-    currentSelectedList = index;
+    m_TODOList.currentSelectedList = index;
 
     nlohmann::json jsonPayload;
     jsonPayload["email"] = "hello@world.com";
-    jsonPayload["name"] = ListVector[currentSelectedList].Name;
+    jsonPayload["name"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].Name;
 
     nlohmann::json json = HTTPRequest::DELETEex(m_URL + "/deleteList", jsonPayload);
     
     if (json.contains("success") && json["success"])
     {
-        ListVector.erase(ListVector.begin() + currentSelectedList);
-        if (!ListVector.empty())
-            currentSelectedList--;
+        m_TODOList.ListVector.erase(m_TODOList.ListVector.begin() + m_TODOList.currentSelectedList);
+        if (!m_TODOList.ListVector.empty())
+            m_TODOList.currentSelectedList--;
         else
-            currentSelectedList = -1;
+            m_TODOList.currentSelectedList = -1;
     }
 }
 
 void UserInterfaceLayer::DeleteTask(int task)
 {
-    currentSelectedTask = task;
+    m_TODOList.currentSelectedTask = task;
 
     nlohmann::json jsonPayload;
     jsonPayload["email"] = "hello@world.com";
-    jsonPayload["list"] = ListVector[currentSelectedList].Name;
-    jsonPayload["name"] = ListVector[currentSelectedList].TaskVector[currentSelectedTask].Name;
+    jsonPayload["list"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].Name;
+    jsonPayload["name"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[m_TODOList.currentSelectedTask].Name;
 
     nlohmann::json json = HTTPRequest::DELETEex(m_URL + "/deleteTask", jsonPayload);
 
     if (json.contains("success") && json["success"])
     {
-        std::vector<Task>::iterator it = ListVector[currentSelectedList].TaskVector.begin();
-        ListVector[currentSelectedList].TaskVector.erase(it + currentSelectedTask);
-        currentSelectedTask = -1;
+        std::vector<Task>::iterator it = m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector.begin();
+        m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector.erase(it + m_TODOList.currentSelectedTask);
+        m_TODOList.currentSelectedTask = -1;
         showTaskProperties = false;
     }
 }
@@ -343,8 +343,8 @@ void UserInterfaceLayer::OnCheckboxUpdate(int index, bool isChecked)
 {
     nlohmann::json jsonPayload;
     jsonPayload["email"] = "hello@world.com";
-    jsonPayload["list"] = ListVector[currentSelectedList].Name;
-    jsonPayload["name"] = ListVector[currentSelectedList].TaskVector[index].Name;
+    jsonPayload["list"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].Name;
+    jsonPayload["name"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[index].Name;
     jsonPayload["complete"] = isChecked;
 
     HTTPRequest::PATCH(m_URL + "/updateTaskComplete", jsonPayload);
@@ -354,9 +354,9 @@ void UserInterfaceLayer::OnDescUpdate(int listIndex, int taskIndex)
 {
     nlohmann::json jsonPayload;
     jsonPayload["email"] = "hello@world.com";
-    jsonPayload["list"] = ListVector[listIndex].Name;
-    jsonPayload["name"] = ListVector[listIndex].TaskVector[taskIndex].Name;
-    jsonPayload["taskDesc"] = ListVector[listIndex].TaskVector[taskIndex].TaskDesc;
+    jsonPayload["list"] = m_TODOList.ListVector[listIndex].Name;
+    jsonPayload["name"] = m_TODOList.ListVector[listIndex].TaskVector[taskIndex].Name;
+    jsonPayload["taskDesc"] = m_TODOList.ListVector[listIndex].TaskVector[taskIndex].TaskDesc;
    
     HTTPRequest::PATCH(m_URL + "/updateTaskDesc", jsonPayload);
 }
