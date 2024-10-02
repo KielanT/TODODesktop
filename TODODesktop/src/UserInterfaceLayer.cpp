@@ -55,6 +55,7 @@ void UserInterfaceLayer::OnAttach()
                 {
                     Task newTask(task["taskName"].get<std::string>());
                     newTask.Complete = task["complete"];
+                    newTask.TaskDesc = task["taskDescription"];
                     list.TaskVector.push_back(newTask);
                 }
             }
@@ -73,7 +74,6 @@ void UserInterfaceLayer::OnDetach()
 
 void UserInterfaceLayer::OnUIRender()
 {
-
     ImGuiWindowClass window_class;
     window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
     ImGui::SetNextWindowClass(&window_class);
@@ -94,7 +94,9 @@ void UserInterfaceLayer::OnUIRender()
             if (ImGui::Selectable(ListVector[n].Name.c_str(), isSelected))
             {
                 currentSelectedList = n;
+                showTaskProperties = false;
                 currentSelectedTask = -1;
+
             }
 
             if (ImGui::BeginPopupContextItem())
@@ -118,7 +120,7 @@ void UserInterfaceLayer::OnUIRender()
 
     ImGui::SetNextWindowClass(&window_class);
     ImGui::Begin("TWO");
-    if (ImGui::Button("Add Task"))
+    if (ImGui::Button("Add Task") && currentSelectedList > -1)
     {
         ImGui::OpenPopup("Add Task");
     }
@@ -164,8 +166,49 @@ void UserInterfaceLayer::OnUIRender()
 
         ImGui::EndListBox();
     }
-
     ImGui::End();
+
+    if (currentSelectedTask > -1)
+        showTaskProperties = true;
+
+    if (showTaskProperties)
+    {
+        ImGuiWindowClass propertiesClass;
+        propertiesClass.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
+        ImGui::SetNextWindowClass(&propertiesClass);
+
+        static float b = 1.0f; //  test whatever color you need from imgui_demo.cpp e.g.
+        static float c = 0.5f; // 
+        static int i = 3;
+
+        if (ImGui::Begin("##TaskProperties", &showTaskProperties))
+        {
+            ImGui::SameLine(ImGui::GetWindowWidth() - 30);
+            ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(i / 7.0f, b, b, 0));
+            if (ImGui::SmallButton("X"))
+                showTaskProperties = false;
+            ImGui::PopStyleColor();
+            ImGui::Separator();
+
+            ImGui::Text(ListVector[currentSelectedList].TaskVector[currentSelectedTask].Name.c_str());
+
+            auto size = ImGui::GetContentRegionAvail();
+            size.y = ImGui::CalcTextSize(ListVector[currentSelectedList].TaskVector[currentSelectedTask].Name.c_str()).y + 50;
+            ImGui::Text("Description: ");
+            ImGui::InputTextMultiline("Description", &ListVector[currentSelectedList].TaskVector[currentSelectedTask].TaskDesc, size);
+            if (ImGui::IsItemDeactivatedAfterEdit())
+            {
+                OnDescUpdate(currentSelectedList, currentSelectedTask);
+            }
+        }
+        ImGui::End();
+    }
+
+    if (showTaskProperties == false)
+        currentSelectedTask = -1;
+
+
+
 
     //ImGui::ShowDemoWindow();
 }
@@ -189,6 +232,7 @@ void UserInterfaceLayer::OnCreateNewList()
         {
             result = buf; 
             buf[0] = '\0';
+            currentSelectedList++;
             ImGui::CloseCurrentPopup();
         }
 
@@ -405,6 +449,37 @@ void UserInterfaceLayer::OnCheckboxUpdate(int index, bool isChecked)
     jsonPayload["list"] = ListVector[currentSelectedList].Name;
     jsonPayload["name"] = ListVector[currentSelectedList].TaskVector[index].Name;
     jsonPayload["complete"] = isChecked;
+    std::string postFields = jsonPayload.dump();
+
+    curl_easy_setopt(curl, CURLOPT_URL, str.c_str());
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postFields.c_str());
+
+    std::string responseData{ "" };
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseData);
+
+    CURLcode res = curl_easy_perform(curl);
+
+    if (res != CURLE_OK)
+    {
+        std::cerr << "PATCH request failed: " << curl_easy_strerror(res) << std::endl;
+    }
+
+    curl_easy_cleanup(curl);
+}
+
+void UserInterfaceLayer::OnDescUpdate(int listIndex, int taskIndex)
+{
+    CURL* curl = curl_easy_init();
+
+    std::string str = m_URL + "/updateTaskDesc";
+
+    nlohmann::json jsonPayload;
+    jsonPayload["email"] = "hello@world.com";
+    jsonPayload["list"] = ListVector[listIndex].Name;
+    jsonPayload["name"] = ListVector[listIndex].TaskVector[taskIndex].Name;
+    jsonPayload["taskDesc"] = ListVector[listIndex].TaskVector[taskIndex].TaskDesc;
     std::string postFields = jsonPayload.dump();
 
     curl_easy_setopt(curl, CURLOPT_URL, str.c_str());

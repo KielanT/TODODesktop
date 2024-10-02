@@ -6,6 +6,7 @@
 
 #include "Walnut/Layer.h"
 #include "imgui.h"
+#include "misc/cpp/imgui_stdlib.h"
 
 struct Task
 {
@@ -13,8 +14,9 @@ struct Task
 	{
 	}
 
-	std::string Name;
-	bool Complete = false;
+	std::string Name{ "" };
+	std::string TaskDesc{ "" };
+	bool Complete{ false };
 };
 
 struct TODOList
@@ -42,11 +44,14 @@ private:
 	void DeleteTask(int task);
 
 	void OnCheckboxUpdate(int index, bool isChecked);
+	void OnDescUpdate(int listIndex, int taskIndex);
 
 private:
 	const std::string m_URL{ "http://192.168.0.50" };
 
 	std::vector<TODOList> ListVector;
-	int currentSelectedList = 0; // TODO save in file
+	int currentSelectedList = -1; // TODO save in file
 	int currentSelectedTask = -1;
+
+	bool showTaskProperties = false;
 };
