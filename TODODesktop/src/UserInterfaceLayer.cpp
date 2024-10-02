@@ -7,64 +7,11 @@
 
 #include "Utility.h"
 #include <imgui_internal.h>
-
+#include "HTTPRequest.h"
 
 void UserInterfaceLayer::OnAttach()
 {
-    CURL* curl = curl_easy_init();
-
-    std::string str = m_URL + "/getLists";
-
-    nlohmann::json jsonPayload;
-    jsonPayload["email"] = "hello@world.com";
-    std::string postFields = jsonPayload.dump();
-
-    curl_easy_setopt(curl, CURLOPT_URL, str.c_str());
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postFields.c_str());
-
-    std::string responseData{ "" };
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseData);
-
-    CURLcode res = curl_easy_perform(curl);
-
-    if (res != CURLE_OK)
-    {
-        std::cerr << "POST request failed: " << curl_easy_strerror(res) << std::endl;
-    }
-    else
-    {
-        long responseCode;
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
-        if (responseCode == 502)
-            return; // TODO tell user that server is not on
-    }
-
-    nlohmann::json json = nlohmann::json::parse(responseData);
-
-    if (json.contains("list"))
-    {
-        for (const auto& [title, data] : json["list"].items())
-        {
-            TODOList list(title);
-          
-            if (data.contains("tasks"))
-            {
-                for (const auto& task : data["tasks"])
-                {
-                    Task newTask(task["taskName"].get<std::string>());
-                    newTask.Complete = task["complete"];
-                    newTask.TaskDesc = task["taskDescription"];
-                    list.TaskVector.push_back(newTask);
-                }
-            }
-
-            ListVector.push_back(list);
-        }
-    }
-
-    curl_easy_cleanup(curl);
+    GetList();
 }
 
 void UserInterfaceLayer::OnDetach()
@@ -74,6 +21,20 @@ void UserInterfaceLayer::OnDetach()
 
 void UserInterfaceLayer::OnUIRender()
 {
+    RenderList();
+
+    RenderTask();
+
+    RenderTaskProperties();
+
+
+
+
+    //ImGui::ShowDemoWindow();
+}
+
+void UserInterfaceLayer::RenderList()
+{
     ImGuiWindowClass window_class;
     window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
     ImGui::SetNextWindowClass(&window_class);
@@ -81,7 +42,7 @@ void UserInterfaceLayer::OnUIRender()
     ImGui::Begin("main");
     if (ImGui::Button("New List"))
     {
-       ImGui::OpenPopup("Create New List");
+        ImGui::OpenPopup("Create New List");
     }
 
     OnCreateNewList();
@@ -117,7 +78,12 @@ void UserInterfaceLayer::OnUIRender()
     }
 
     ImGui::End();
+}
 
+void UserInterfaceLayer::RenderTask()
+{
+    ImGuiWindowClass window_class;
+    window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
     ImGui::SetNextWindowClass(&window_class);
     ImGui::Begin("TWO");
     if (ImGui::Button("Add Task") && currentSelectedList > -1)
@@ -136,7 +102,7 @@ void UserInterfaceLayer::OnUIRender()
                 bool currentState = ListVector[currentSelectedList].TaskVector[n].Complete;
 
                 ImGui::Checkbox(("###" + ListVector[currentSelectedList].TaskVector[n].Name).c_str(), &ListVector[currentSelectedList].TaskVector[n].Complete);
-                
+
                 if (currentState != ListVector[currentSelectedList].TaskVector[n].Complete)
                 {
                     // Send to sql
@@ -167,7 +133,10 @@ void UserInterfaceLayer::OnUIRender()
         ImGui::EndListBox();
     }
     ImGui::End();
+}
 
+void UserInterfaceLayer::RenderTaskProperties()
+{
     if (currentSelectedTask > -1)
         showTaskProperties = true;
 
@@ -206,11 +175,34 @@ void UserInterfaceLayer::OnUIRender()
 
     if (showTaskProperties == false)
         currentSelectedTask = -1;
+}
 
+void UserInterfaceLayer::GetList()
+{
+    nlohmann::json jsonPayload;
+    jsonPayload["email"] = "hello@world.com";
+    nlohmann::json json = HTTPRequest::GET(m_URL + "/getLists", jsonPayload);
 
+    if (json.contains("list"))
+    {
+        for (const auto& [title, data] : json["list"].items())
+        {
+            TODOList list(title);
 
+            if (data.contains("tasks"))
+            {
+                for (const auto& task : data["tasks"])
+                {
+                    Task newTask(task["taskName"].get<std::string>());
+                    newTask.Complete = task["complete"];
+                    newTask.TaskDesc = task["taskDescription"];
+                    list.TaskVector.push_back(newTask);
+                }
+            }
 
-    //ImGui::ShowDemoWindow();
+            ListVector.push_back(list);
+        }
+    }
 }
 
 void UserInterfaceLayer::OnCreateNewList()
@@ -244,42 +236,19 @@ void UserInterfaceLayer::OnCreateNewList()
             ImGui::CloseCurrentPopup();
         }
         
-
         ImGui::EndPopup();
     }
     
     if (!result.empty())
     {
-        // Create list
-        
-         CURL* curl = curl_easy_init();
+        nlohmann::json jsonPayload;
+        jsonPayload["email"] = "hello@world.com";
+        jsonPayload["name"] = result;
 
-         std::string str = m_URL + "/newList";
+        nlohmann::json json = HTTPRequest::POST(m_URL + "/newList", jsonPayload);
+        // TODO if response is good
+        ListVector.push_back(result);
 
-         nlohmann::json jsonPayload;
-         jsonPayload["email"] = "hello@world.com";
-         jsonPayload["name"] = result;
-         std::string postFields = jsonPayload.dump();
-
-         curl_easy_setopt(curl, CURLOPT_URL, str.c_str());
-         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
-         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postFields.c_str());
-
-         std::string responseData{ "" };
-         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseData);
-
-         CURLcode res = curl_easy_perform(curl);
-
-         if (res != CURLE_OK)
-         {
-             std::cerr << "POST request failed: " << curl_easy_strerror(res) << std::endl;
-         }
-
-         // TODO if response is okay then add to the list
-         ListVector.push_back(result);
-
-         curl_easy_cleanup(curl);
     }
 }
 
@@ -319,36 +288,14 @@ void UserInterfaceLayer::OnCreateAddTask()
 
     if (!result.empty())
     {
-        CURL* curl = curl_easy_init();
-
-        std::string str = m_URL + "/newTask";
-
         nlohmann::json jsonPayload;
         jsonPayload["email"] = "hello@world.com";
         jsonPayload["list"] = ListVector[currentSelectedList].Name;
         jsonPayload["name"] = result;
-        std::string postFields = jsonPayload.dump();
 
-        curl_easy_setopt(curl, CURLOPT_URL, str.c_str());
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postFields.c_str());
-
-        std::string responseData{ "" };
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseData);
-
-        CURLcode res = curl_easy_perform(curl);
-
-        if (res != CURLE_OK)
-        {
-            std::cerr << "POST request failed: " << curl_easy_strerror(res) << std::endl;
-        }
-
+        nlohmann::json json = HTTPRequest::POST(m_URL + "/newTask", jsonPayload);
         // TODO if response is okay then add to the list
-        ListVector[currentSelectedList].TaskVector.push_back(result);;
-
-        curl_easy_cleanup(curl);
-        
+        ListVector[currentSelectedList].TaskVector.push_back(result);
     }
 }
 
@@ -356,33 +303,11 @@ void UserInterfaceLayer::DeleteList(int index)
 {
     currentSelectedList = index;
 
-    CURL* curl = curl_easy_init();
-
-    std::string str = m_URL + "/deleteList";
-
     nlohmann::json jsonPayload;
     jsonPayload["email"] = "hello@world.com";
     jsonPayload["name"] = ListVector[currentSelectedList].Name;
-    std::string postFields = jsonPayload.dump();
 
-    curl_easy_setopt(curl, CURLOPT_URL, str.c_str());
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postFields.c_str());
-
-    std::string responseData{ "" };
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseData);
-
-    CURLcode res = curl_easy_perform(curl);
-
-    if (res != CURLE_OK)
-    {
-        std::cerr << "POST request failed: " << curl_easy_strerror(res) << std::endl;
-    }
-
-    curl_easy_cleanup(curl);
-
-    nlohmann::json json = nlohmann::json::parse(responseData);
+    nlohmann::json json = HTTPRequest::DELETEex(m_URL + "/deleteList", jsonPayload);
     
     if (json.contains("success") && json["success"])
     {
@@ -391,7 +316,6 @@ void UserInterfaceLayer::DeleteList(int index)
             currentSelectedList--;
         else
             currentSelectedList = -1;
-
     }
 }
 
@@ -399,103 +323,40 @@ void UserInterfaceLayer::DeleteTask(int task)
 {
     currentSelectedTask = task;
 
-    CURL* curl = curl_easy_init();
-
-    std::string str = m_URL + "/deleteTask";
-
     nlohmann::json jsonPayload;
     jsonPayload["email"] = "hello@world.com";
     jsonPayload["list"] = ListVector[currentSelectedList].Name;
     jsonPayload["name"] = ListVector[currentSelectedList].TaskVector[currentSelectedTask].Name;
-    std::string postFields = jsonPayload.dump();
 
-    curl_easy_setopt(curl, CURLOPT_URL, str.c_str());
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postFields.c_str());
-
-    std::string responseData{ "" };
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseData);
-
-    CURLcode res = curl_easy_perform(curl);
-
-    if (res != CURLE_OK)
-    {
-        std::cerr << "POST request failed: " << curl_easy_strerror(res) << std::endl;
-    }
-
-    curl_easy_cleanup(curl);
-
-    nlohmann::json json = nlohmann::json::parse(responseData);
+    nlohmann::json json = HTTPRequest::DELETEex(m_URL + "/deleteTask", jsonPayload);
 
     if (json.contains("success") && json["success"])
     {
         std::vector<Task>::iterator it = ListVector[currentSelectedList].TaskVector.begin();
         ListVector[currentSelectedList].TaskVector.erase(it + currentSelectedTask);
         currentSelectedTask = -1;
+        showTaskProperties = false;
     }
-
-    
 }
 
 void UserInterfaceLayer::OnCheckboxUpdate(int index, bool isChecked)
 {
-    CURL* curl = curl_easy_init();
-
-    std::string str = m_URL + "/updateTaskComplete";
-
     nlohmann::json jsonPayload;
     jsonPayload["email"] = "hello@world.com";
     jsonPayload["list"] = ListVector[currentSelectedList].Name;
     jsonPayload["name"] = ListVector[currentSelectedList].TaskVector[index].Name;
     jsonPayload["complete"] = isChecked;
-    std::string postFields = jsonPayload.dump();
 
-    curl_easy_setopt(curl, CURLOPT_URL, str.c_str());
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postFields.c_str());
-
-    std::string responseData{ "" };
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseData);
-
-    CURLcode res = curl_easy_perform(curl);
-
-    if (res != CURLE_OK)
-    {
-        std::cerr << "PATCH request failed: " << curl_easy_strerror(res) << std::endl;
-    }
-
-    curl_easy_cleanup(curl);
+    HTTPRequest::PATCH(m_URL + "/updateTaskComplete", jsonPayload);
 }
 
 void UserInterfaceLayer::OnDescUpdate(int listIndex, int taskIndex)
 {
-    CURL* curl = curl_easy_init();
-
-    std::string str = m_URL + "/updateTaskDesc";
-
     nlohmann::json jsonPayload;
     jsonPayload["email"] = "hello@world.com";
     jsonPayload["list"] = ListVector[listIndex].Name;
     jsonPayload["name"] = ListVector[listIndex].TaskVector[taskIndex].Name;
     jsonPayload["taskDesc"] = ListVector[listIndex].TaskVector[taskIndex].TaskDesc;
-    std::string postFields = jsonPayload.dump();
-
-    curl_easy_setopt(curl, CURLOPT_URL, str.c_str());
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postFields.c_str());
-
-    std::string responseData{ "" };
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseData);
-
-    CURLcode res = curl_easy_perform(curl);
-
-    if (res != CURLE_OK)
-    {
-        std::cerr << "PATCH request failed: " << curl_easy_strerror(res) << std::endl;
-    }
-
-    curl_easy_cleanup(curl);
+   
+    HTTPRequest::PATCH(m_URL + "/updateTaskDesc", jsonPayload);
 }

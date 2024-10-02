@@ -37,6 +37,12 @@ public:
 	virtual void OnUIRender() override;
 
 private:
+	void RenderList();
+	void RenderTask();
+	void RenderTaskProperties();
+
+	void GetList();
+
 	void OnCreateNewList();
 	void OnCreateAddTask();
 
