@@ -21,7 +21,7 @@ public:
 
 private:
 	static void GetCredentials(std::string& clientId, std::string& clientSecret, const std::string& path);
-
+	static void ExchangeToken(const std::string& code);
 	static void GetUserData();
 };
 

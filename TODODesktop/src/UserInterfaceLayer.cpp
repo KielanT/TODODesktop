@@ -37,6 +37,10 @@ void UserInterfaceLayer::OnUIRender()
 
 void UserInterfaceLayer::RenderLogin()
 {
+    static bool done{ false };
+    if (done)
+        return;
+
     // TODO return from function once login is done
     if (login)
     {
@@ -46,7 +50,8 @@ void UserInterfaceLayer::RenderLogin()
 
     static bool success{ false };
 
-    if (ImGui::BeginPopupModal("LoginModal", NULL))
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove; // TODO make pretty
+    if (ImGui::BeginPopupModal("LoginModal", NULL, flags))
     {
         if (ImGui::Button("Login"))
         {
@@ -67,7 +72,8 @@ void UserInterfaceLayer::RenderLogin()
         ImGui::OpenPopup("LoginSuccess");
     }
 
-    if (ImGui::BeginPopupModal("LoginSuccess"))
+
+    if (ImGui::BeginPopupModal("LoginSuccess", NULL, flags))
     {
         // Test on first time setup
         static std::string welcome = "Welcome back " + LoginManager::UserData.Name;
@@ -81,12 +87,19 @@ void UserInterfaceLayer::RenderLogin()
                 welcome = "Welcome " + LoginManager::UserData.Name;
                 CreateUser();
             }
+            else
+            {
+                //GetList();
+            }
             IsCalledOnce = true;
         }
-
         ImGui::Text(welcome.c_str());
 
-        //GetList();
+        if (ImGui::Button("continue"))
+        {
+            done = true;
+            ImGui::CloseCurrentPopup();
+        }
 
         ImGui::EndPopup();
     }
@@ -240,7 +253,7 @@ bool UserInterfaceLayer::IsFirstTime()
 {
     nlohmann::json jsonPayload;
     jsonPayload["gID"] = LoginManager::UserData.gID;
-    std::string response = HTTPRequest::GET(m_URL + "/doesUserExist", jsonPayload);
+    std::string response = HTTPRequest::GET(m_URL + "/doesUserExist", jsonPayload.dump());
     // TODO use response for error check 
 
     nlohmann::json json = nlohmann::json::parse(response);
@@ -259,16 +272,17 @@ void UserInterfaceLayer::CreateUser()
     jsonPayload["name"] = LoginManager::UserData.Name;
     jsonPayload["email"] = LoginManager::UserData.Email;
     jsonPayload["id"] = LoginManager::UserData.gID;
-    HTTPRequest::POST(m_URL + "/createUser", jsonPayload);
-
+    std::string response = HTTPRequest::POST(m_URL + "/createUser", jsonPayload);
+    // TODO check
 }
 
 void UserInterfaceLayer::GetList()
 {
     nlohmann::json jsonPayload;
     jsonPayload["email"] = "hello@world.com";
-    nlohmann::json json = nlohmann::json::parse(HTTPRequest::GET(m_URL + "/getLists", jsonPayload));
-
+    std::string response = HTTPRequest::GET(m_URL + "/getLists", jsonPayload.dump());
+    // TODO check
+    nlohmann::json json = nlohmann::json::parse(response);
     if (json.contains("list"))
     {
         for (const auto& [title, data] : json["list"].items())
@@ -331,7 +345,7 @@ void UserInterfaceLayer::OnCreateNewList()
         jsonPayload["email"] = "hello@world.com";
         jsonPayload["name"] = result;
 
-        nlohmann::json json = HTTPRequest::POST(m_URL + "/newList", jsonPayload);
+       std::string response = HTTPRequest::POST(m_URL + "/newList", jsonPayload.dump());
         // TODO if response is good
         m_TODOList.ListVector.push_back(result);
 
@@ -379,7 +393,7 @@ void UserInterfaceLayer::OnCreateAddTask()
         jsonPayload["list"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].Name;
         jsonPayload["name"] = result;
 
-        nlohmann::json json = HTTPRequest::POST(m_URL + "/newTask", jsonPayload);
+        std::string response = HTTPRequest::POST(m_URL + "/newTask", jsonPayload.dump());
         // TODO if response is okay then add to the list
         m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector.push_back(result);
     }
@@ -393,8 +407,10 @@ void UserInterfaceLayer::DeleteList(int index)
     jsonPayload["email"] = "hello@world.com";
     jsonPayload["name"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].Name;
 
-    nlohmann::json json = HTTPRequest::DELETEex(m_URL + "/deleteList", jsonPayload);
-    
+    std::string response = HTTPRequest::DELETEex(m_URL + "/deleteList", jsonPayload.dump());
+    // TODO error check
+    nlohmann::json json = nlohmann::json::parse(response);
+
     if (json.contains("success") && json["success"])
     {
         m_TODOList.ListVector.erase(m_TODOList.ListVector.begin() + m_TODOList.currentSelectedList);
@@ -414,7 +430,8 @@ void UserInterfaceLayer::DeleteTask(int task)
     jsonPayload["list"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].Name;
     jsonPayload["name"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[m_TODOList.currentSelectedTask].Name;
 
-    nlohmann::json json = HTTPRequest::DELETEex(m_URL + "/deleteTask", jsonPayload);
+    std::string response = HTTPRequest::DELETEex(m_URL + "/deleteTask", jsonPayload.dump());
+    nlohmann::json json = nlohmann::json::parse(response);
 
     if (json.contains("success") && json["success"])
     {
@@ -433,7 +450,7 @@ void UserInterfaceLayer::OnCheckboxUpdate(int index, bool isChecked)
     jsonPayload["name"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[index].Name;
     jsonPayload["complete"] = isChecked;
 
-    HTTPRequest::PATCH(m_URL + "/updateTaskComplete", jsonPayload);
+    HTTPRequest::PATCH(m_URL + "/updateTaskComplete", jsonPayload.dump());
 }
 
 void UserInterfaceLayer::OnDescUpdate(int listIndex, int taskIndex)
@@ -444,5 +461,5 @@ void UserInterfaceLayer::OnDescUpdate(int listIndex, int taskIndex)
     jsonPayload["name"] = m_TODOList.ListVector[listIndex].TaskVector[taskIndex].Name;
     jsonPayload["taskDesc"] = m_TODOList.ListVector[listIndex].TaskVector[taskIndex].TaskDesc;
    
-    HTTPRequest::PATCH(m_URL + "/updateTaskDesc", jsonPayload);
+    HTTPRequest::PATCH(m_URL + "/updateTaskDesc", jsonPayload.dump());
 }

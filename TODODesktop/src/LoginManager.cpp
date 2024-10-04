@@ -40,7 +40,7 @@ bool LoginManager::Login()
             // TODO explore auth fail
             std::string code = req.url_params.get("code");
 
-            AccessToken = HTTPRequest::ExchangeCodeforToken(ClientId, ClientSecret, code);
+            ExchangeToken(code);
             GetUserData();
 
             app.stop();
@@ -73,10 +73,31 @@ void LoginManager::GetCredentials(std::string& clientId, std::string& clientSecr
    
 }
 
+void LoginManager::ExchangeToken(const std::string& code)
+{
+    std::string postFields = "code=" + code +
+    	"&client_id=" + ClientId +
+    	"&client_secret=" + ClientSecret +
+    	"&redirect_uri=" + "http://localhost:3000/callback" +
+    	"&grant_type=authorization_code";
+
+    std::string response = HTTPRequest::POST("https://oauth2.googleapis.com/token", postFields);
+    // TODO error checking
+    nlohmann::json json = nlohmann::json::parse(response);
+    if (json.contains("access_token"))
+        AccessToken = json["access_token"];
+
+}
+
 void LoginManager::GetUserData()
 {
-    nlohmann::json json = HTTPRequest::TestAPI(AccessToken);
-   
+    std::string url = "https://www.googleapis.com/oauth2/v2/userinfo";
+    std::string response = HTTPRequest::GET(url, "", AccessToken);
+
+    nlohmann::json json = nlohmann::json::parse(response);
+    // TODO error checking
+    std::cout << json.dump();
+
     if (json.contains("id"))
         UserData.gID = json["id"];
 
