@@ -13,10 +13,14 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::stri
 class HTTPRequest
 {
 public:
-	static nlohmann::json GET(const std::string& url, nlohmann::json payload);
+	static std::string GET(const std::string& url, nlohmann::json payload);
 	static nlohmann::json POST(const std::string& url, nlohmann::json payload);
 	static nlohmann::json DELETEex(const std::string& url, nlohmann::json payload);
 	static void PATCH(const std::string& url, nlohmann::json payload); // TODO Add json for error checking
+
+	static std::string ExchangeCodeforToken(const std::string& clientId, const std::string& clientSecret, const std::string& code);
+
+	static nlohmann::json TestAPI(const std::string& token); // TODO refactor this into get
 
 };
 

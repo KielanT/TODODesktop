@@ -9,6 +9,7 @@ project "TODODesktop"
 
    IncludeDir["curl"] = "external/curl/include"
    IncludeDir["nlohmann"] = "external/nlohmann"
+   IncludeDir["crow"] = "external/crow"
    IncludeDir["websocketpp"] = "external/websocketpp"
    IncludeDir["boost"] = "external/boost_1_82_0"
 
@@ -28,6 +29,7 @@ project "TODODesktop"
       "%{IncludeDir.glm}",
       "%{IncludeDir.curl}",
       "%{IncludeDir.nlohmann}",
+      "%{IncludeDir.crow}",
       "%{IncludeDir.websocketpp}",
       "%{IncludeDir.boost}",
       "../../TODOShared/"

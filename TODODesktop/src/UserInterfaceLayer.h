@@ -20,9 +20,14 @@ public:
 	virtual void OnUIRender() override;
 
 private:
+	void RenderLogin();
 	void RenderList();
 	void RenderTask();
 	void RenderTaskProperties();
+
+	bool IsFirstTime();
+
+	void CreateUser();
 
 	void GetList();
 
@@ -41,4 +46,6 @@ private:
 	bool showTaskProperties = false;
 
 	TODOListManager m_TODOList;
+
+	bool login = false;
 };

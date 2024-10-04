@@ -6,12 +6,12 @@
 
 #include <imgui_internal.h>
 #include "HTTPRequest.h"
-
+#include "LoginManager.h"
 
 
 void UserInterfaceLayer::OnAttach()
 {
-    GetList();
+    login = true;
 }
 
 void UserInterfaceLayer::OnDetach()
@@ -21,6 +21,8 @@ void UserInterfaceLayer::OnDetach()
 
 void UserInterfaceLayer::OnUIRender()
 {
+    RenderLogin();
+
     RenderList();
 
     RenderTask();
@@ -31,6 +33,63 @@ void UserInterfaceLayer::OnUIRender()
 
 
     //ImGui::ShowDemoWindow();
+}
+
+void UserInterfaceLayer::RenderLogin()
+{
+    // TODO return from function once login is done
+    if (login)
+    {
+        ImGui::OpenPopup("LoginModal");
+        login = false;
+    }
+
+    static bool success{ false };
+
+    if (ImGui::BeginPopupModal("LoginModal", NULL))
+    {
+        if (ImGui::Button("Login"))
+        {
+            success = LoginManager::Login();
+        }
+
+        if (success)
+        {
+            ImGui::CloseCurrentPopup();
+            
+        }
+
+        ImGui::EndPopup();
+    }
+
+    if (success)
+    {
+        ImGui::OpenPopup("LoginSuccess");
+    }
+
+    if (ImGui::BeginPopupModal("LoginSuccess"))
+    {
+        // Test on first time setup
+        static std::string welcome = "Welcome back " + LoginManager::UserData.Name;
+
+        static bool IsCalledOnce = false;
+
+        if (!IsCalledOnce)
+        {
+            if (IsFirstTime())
+            {
+                welcome = "Welcome " + LoginManager::UserData.Name;
+                CreateUser();
+            }
+            IsCalledOnce = true;
+        }
+
+        ImGui::Text(welcome.c_str());
+
+        //GetList();
+
+        ImGui::EndPopup();
+    }
 }
 
 void UserInterfaceLayer::RenderList()
@@ -177,11 +236,38 @@ void UserInterfaceLayer::RenderTaskProperties()
         m_TODOList.currentSelectedTask = -1;
 }
 
+bool UserInterfaceLayer::IsFirstTime()
+{
+    nlohmann::json jsonPayload;
+    jsonPayload["gID"] = LoginManager::UserData.gID;
+    std::string response = HTTPRequest::GET(m_URL + "/doesUserExist", jsonPayload);
+    // TODO use response for error check 
+
+    nlohmann::json json = nlohmann::json::parse(response);
+
+    if (json.contains("exist"))
+        return !json["exist"].get<bool>(); // exist returns false if the user does not exist, we want to then return true to show that it is the first time
+
+
+    return false;
+}
+
+void UserInterfaceLayer::CreateUser()
+{
+    nlohmann::json jsonPayload;
+    // TODO get response if failed
+    jsonPayload["name"] = LoginManager::UserData.Name;
+    jsonPayload["email"] = LoginManager::UserData.Email;
+    jsonPayload["id"] = LoginManager::UserData.gID;
+    HTTPRequest::POST(m_URL + "/createUser", jsonPayload);
+
+}
+
 void UserInterfaceLayer::GetList()
 {
     nlohmann::json jsonPayload;
     jsonPayload["email"] = "hello@world.com";
-    nlohmann::json json = HTTPRequest::GET(m_URL + "/getLists", jsonPayload);
+    nlohmann::json json = nlohmann::json::parse(HTTPRequest::GET(m_URL + "/getLists", jsonPayload));
 
     if (json.contains("list"))
     {
