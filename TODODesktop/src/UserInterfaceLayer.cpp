@@ -89,7 +89,7 @@ void UserInterfaceLayer::RenderLogin()
             }
             else
             {
-                //GetList();
+                GetList();
             }
             IsCalledOnce = true;
         }
@@ -279,7 +279,8 @@ void UserInterfaceLayer::CreateUser()
 void UserInterfaceLayer::GetList()
 {
     nlohmann::json jsonPayload;
-    jsonPayload["email"] = "hello@world.com";
+    jsonPayload["email"] = LoginManager::UserData.Email;
+    jsonPayload["id"] = LoginManager::UserData.gID;
     std::string response = HTTPRequest::GET(m_URL + "/getLists", jsonPayload.dump());
     // TODO check
     nlohmann::json json = nlohmann::json::parse(response);
@@ -342,7 +343,8 @@ void UserInterfaceLayer::OnCreateNewList()
     if (!result.empty())
     {
         nlohmann::json jsonPayload;
-        jsonPayload["email"] = "hello@world.com";
+        jsonPayload["id"] = LoginManager::UserData.gID;
+        jsonPayload["email"] = LoginManager::UserData.Email;
         jsonPayload["name"] = result;
 
        std::string response = HTTPRequest::POST(m_URL + "/newList", jsonPayload.dump());
@@ -389,7 +391,8 @@ void UserInterfaceLayer::OnCreateAddTask()
     if (!result.empty())
     {
         nlohmann::json jsonPayload;
-        jsonPayload["email"] = "hello@world.com";
+        jsonPayload["email"] = LoginManager::UserData.Email;
+        jsonPayload["id"] = LoginManager::UserData.gID;
         jsonPayload["list"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].Name;
         jsonPayload["name"] = result;
 
@@ -404,7 +407,8 @@ void UserInterfaceLayer::DeleteList(int index)
     m_TODOList.currentSelectedList = index;
 
     nlohmann::json jsonPayload;
-    jsonPayload["email"] = "hello@world.com";
+    jsonPayload["email"] = LoginManager::UserData.Email;
+    jsonPayload["id"] = LoginManager::UserData.gID;
     jsonPayload["name"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].Name;
 
     std::string response = HTTPRequest::DELETEex(m_URL + "/deleteList", jsonPayload.dump());
@@ -426,7 +430,8 @@ void UserInterfaceLayer::DeleteTask(int task)
     m_TODOList.currentSelectedTask = task;
 
     nlohmann::json jsonPayload;
-    jsonPayload["email"] = "hello@world.com";
+    jsonPayload["email"] = LoginManager::UserData.Email;
+    jsonPayload["id"] = LoginManager::UserData.gID;
     jsonPayload["list"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].Name;
     jsonPayload["name"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[m_TODOList.currentSelectedTask].Name;
 
@@ -445,7 +450,8 @@ void UserInterfaceLayer::DeleteTask(int task)
 void UserInterfaceLayer::OnCheckboxUpdate(int index, bool isChecked)
 {
     nlohmann::json jsonPayload;
-    jsonPayload["email"] = "hello@world.com";
+    jsonPayload["email"] = LoginManager::UserData.Email;
+    jsonPayload["id"] = LoginManager::UserData.gID;
     jsonPayload["list"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].Name;
     jsonPayload["name"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[index].Name;
     jsonPayload["complete"] = isChecked;
@@ -456,7 +462,8 @@ void UserInterfaceLayer::OnCheckboxUpdate(int index, bool isChecked)
 void UserInterfaceLayer::OnDescUpdate(int listIndex, int taskIndex)
 {
     nlohmann::json jsonPayload;
-    jsonPayload["email"] = "hello@world.com";
+    jsonPayload["email"] = LoginManager::UserData.Email;
+    jsonPayload["id"] = LoginManager::UserData.gID;
     jsonPayload["list"] = m_TODOList.ListVector[listIndex].Name;
     jsonPayload["name"] = m_TODOList.ListVector[listIndex].TaskVector[taskIndex].Name;
     jsonPayload["taskDesc"] = m_TODOList.ListVector[listIndex].TaskVector[taskIndex].TaskDesc;
