@@ -693,8 +693,8 @@ namespace Walnut {
 
 		// Logo
 		{
-			const int logoWidth = 48;// m_LogoTex->GetWidth();
-			const int logoHeight = 48;// m_LogoTex->GetHeight();
+			const int logoWidth = 38;// m_LogoTex->GetWidth();
+			const int logoHeight = 38;// m_LogoTex->GetHeight();
 			const ImVec2 logoOffset(16.0f + windowPadding.x, 5.0f + windowPadding.y + titlebarVerticalOffset);
 			const ImVec2 logoRectStart = { ImGui::GetItemRectMin().x + logoOffset.x, ImGui::GetItemRectMin().y + logoOffset.y };
 			const ImVec2 logoRectMax = { logoRectStart.x + logoWidth, logoRectStart.y + logoHeight };

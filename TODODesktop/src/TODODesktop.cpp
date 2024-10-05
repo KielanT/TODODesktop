@@ -12,6 +12,7 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 	spec.Name = "TODO List Desktop";
 	spec.CustomTitlebar = true;
 	spec.CenterWindow = true;
+	spec.IconPath = "../../Resources/ICON.png";
 
 	Walnut::Application* app = new Walnut::Application(spec);
 	std::shared_ptr<UserInterfaceLayer> exampleLayer = std::make_shared<UserInterfaceLayer>();
