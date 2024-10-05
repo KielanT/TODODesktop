@@ -11,7 +11,10 @@
 
 void UserInterfaceLayer::OnAttach()
 {
-    login = true;
+    if (!LoginManager::AutoLogin())
+        login = true;// Flag to login
+    else
+        GetList();
 }
 
 void UserInterfaceLayer::OnDetach()
@@ -29,80 +32,60 @@ void UserInterfaceLayer::OnUIRender()
 
     RenderTaskProperties();
 
-
-
-
     //ImGui::ShowDemoWindow();
 }
 
 void UserInterfaceLayer::RenderLogin()
 {
-    static bool done{ false };
-    if (done)
-        return;
+    if (!login) return;
 
-    // TODO return from function once login is done
-    if (login)
+    static bool isFirstCall{ true };
+    static bool isSuccess{ false };
+    static std::string titleText{ "Please Login!" };
+
+    if (isFirstCall)
     {
         ImGui::OpenPopup("LoginModal");
-        login = false;
+        isFirstCall = false;
     }
-
-    static bool success{ false };
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove; // TODO make pretty
     if (ImGui::BeginPopupModal("LoginModal", NULL, flags))
     {
-        if (ImGui::Button("Login"))
+        ImGui::Text(titleText.c_str());
+
+        if (!isSuccess)
         {
-            success = LoginManager::Login();
-        }
-
-        if (success)
-        {
-            ImGui::CloseCurrentPopup();
-            
-        }
-
-        ImGui::EndPopup();
-    }
-
-    if (success)
-    {
-        ImGui::OpenPopup("LoginSuccess");
-    }
-
-
-    if (ImGui::BeginPopupModal("LoginSuccess", NULL, flags))
-    {
-        // Test on first time setup
-        static std::string welcome = "Welcome back " + LoginManager::UserData.Name;
-
-        static bool IsCalledOnce = false;
-
-        if (!IsCalledOnce)
-        {
-            if (IsFirstTime())
+            if (ImGui::Button("Login"))
             {
-                welcome = "Welcome " + LoginManager::UserData.Name;
+                isSuccess = LoginManager::Login();
+            }
+        }
+        else
+        {
+            if (ImGui::Button("Continue"))
+            {
+                login = false;
+                ImGui::CloseCurrentPopup();
+            }
+
+            static bool IsFirstTimeLogin = IsFirstTime();
+
+            if (IsFirstTimeLogin)
+            {
+                titleText = "Welcome " + LoginManager::UserData.Name;
                 CreateUser();
             }
             else
             {
+                titleText = "Welcome back " + LoginManager::UserData.Name;
                 GetList();
             }
-            IsCalledOnce = true;
-        }
-        ImGui::Text(welcome.c_str());
-
-        if (ImGui::Button("continue"))
-        {
-            done = true;
-            ImGui::CloseCurrentPopup();
         }
 
         ImGui::EndPopup();
     }
+
 }
 
 void UserInterfaceLayer::RenderList()
@@ -272,7 +255,7 @@ void UserInterfaceLayer::CreateUser()
     jsonPayload["name"] = LoginManager::UserData.Name;
     jsonPayload["email"] = LoginManager::UserData.Email;
     jsonPayload["id"] = LoginManager::UserData.gID;
-    std::string response = HTTPRequest::POST(m_URL + "/createUser", jsonPayload);
+    std::string response = HTTPRequest::POST(m_URL + "/createUser", jsonPayload.dump());
     // TODO check
 }
 

@@ -22,6 +22,7 @@ public:
 		Refresh
 	};
 
+	static bool AutoLogin();
 	static bool Login();
 
 	static std::string ClientId;

@@ -11,12 +11,11 @@ std::string LoginManager::RefreshToken = "";
 User LoginManager::UserData{};
 
 
-bool LoginManager::Login()
+bool LoginManager::AutoLogin()
 {
-    // TODO explore doing it from the actual server
     GetCredentials(ClientId, ClientSecret, "../../credentials.json");
 
-    
+
     if (!RefreshToken.empty())
     {
         // TODO error check obtaining new token
@@ -25,6 +24,14 @@ bool LoginManager::Login()
 
         return true;
     }
+    return false;
+}
+
+bool LoginManager::Login()
+{
+    // TODO explore doing it from the actual server
+    GetCredentials(ClientId, ClientSecret, "../../credentials.json");
+
 
 
     crow::SimpleApp app;
