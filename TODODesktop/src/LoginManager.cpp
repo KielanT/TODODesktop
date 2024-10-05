@@ -7,17 +7,27 @@
 std::string LoginManager::ClientId = "";
 std::string LoginManager::ClientSecret = "";
 std::string LoginManager::AccessToken = "";
+std::string LoginManager::RefreshToken = "";
 User LoginManager::UserData{};
 
 
 bool LoginManager::Login()
 {
-    // TODO read client id from file#
     // TODO explore doing it from the actual server
+    GetCredentials(ClientId, ClientSecret, "../../credentials.json");
+
+    
+    if (!RefreshToken.empty())
+    {
+        // TODO error check obtaining new token
+        ExchangeToken(RefreshToken, TokenType::Refresh);
+        GetUserData();
+
+        return true;
+    }
+
 
     crow::SimpleApp app;
-  
-    GetCredentials(ClientId, ClientSecret, "../../credentials.json");
 
     CROW_ROUTE(app, "/login")([&](const crow::request& req)
         {
@@ -40,7 +50,7 @@ bool LoginManager::Login()
             // TODO explore auth fail
             std::string code = req.url_params.get("code");
 
-            ExchangeToken(code);
+            ExchangeToken(code, TokenType::Auth);
             GetUserData();
 
             app.stop();
@@ -61,7 +71,8 @@ void LoginManager::GetCredentials(std::string& clientId, std::string& clientSecr
 
     nlohmann::json data = nlohmann::json::parse(file);
 
-    if (data.contains("installed"))
+    if (data.contains("installed")) // installed is just the in the file from google with the data we need
+                                    // TODO create a file with encryption
     {
         nlohmann::json installed = data["installed"];
         if (installed.contains("client_id"))
@@ -69,23 +80,59 @@ void LoginManager::GetCredentials(std::string& clientId, std::string& clientSecr
 
         if (installed.contains("client_secret"))
             clientSecret = installed["client_secret"];
+
+        if(installed.contains("refresh_token"))
+            RefreshToken = installed["refresh_token"];
     }
-   
+    file.close();
 }
 
-void LoginManager::ExchangeToken(const std::string& code)
+void LoginManager::SaveCredentials(const std::string& path)
 {
-    std::string postFields = "code=" + code +
-    	"&client_id=" + ClientId +
-    	"&client_secret=" + ClientSecret +
-    	"&redirect_uri=" + "http://localhost:3000/callback" +
-    	"&grant_type=authorization_code";
+    if (RefreshToken.empty()) return; // Only saving refresh token for now
+
+    // Read file
+    std::fstream file(path);
+    nlohmann::json data = nlohmann::json::parse(file);
+    file.close();
+
+    std::ofstream outFile(path);
+    data["installed"]["refresh_token"] = LoginManager::RefreshToken;
+    outFile << std::setw(4) << data << std::endl;
+    outFile.close();
+
+}
+
+void LoginManager::ExchangeToken(const std::string& code, const TokenType& token)
+{
+    std::string postFields{ "" };
+    if (token == TokenType::Auth)
+    {
+        postFields = "code=" + code +
+            "&client_id=" + ClientId +
+            "&client_secret=" + ClientSecret +
+            "&redirect_uri=" + "http://localhost:3000/callback" +
+            "&grant_type=authorization_code";
+    }
+    else if (token == TokenType::Refresh)
+    {
+        postFields = "client_id=" + ClientId +
+            "&client_secret=" + ClientSecret +
+            "&refresh_token=" + code +
+            "&grant_type=refresh_token";
+    }
+
 
     std::string response = HTTPRequest::POST("https://oauth2.googleapis.com/token", postFields);
     // TODO error checking
     nlohmann::json json = nlohmann::json::parse(response);
     if (json.contains("access_token"))
         AccessToken = json["access_token"];
+    if (json.contains("refresh_token"))
+    {
+        RefreshToken = json["refresh_token"];
+        SaveCredentials("../../credentials.json");
+    }
 
 }
 
@@ -96,7 +143,6 @@ void LoginManager::GetUserData()
 
     nlohmann::json json = nlohmann::json::parse(response);
     // TODO error checking
-    std::cout << json.dump();
 
     if (json.contains("id"))
         UserData.gID = json["id"];
