@@ -1,20 +1,23 @@
 #include "UserInterfaceLayer.h"
 #include <iostream>
-
+#include <ctime>
 #include "curl/curl.h"
 #include "json.hpp"
 
-#include <imgui_internal.h>
+#include "imgui_internal.h"
 #include "HTTPRequest.h"
 #include "LoginManager.h"
-
+#include "ImguiAddons/imguidatechooser.h"
 
 void UserInterfaceLayer::OnAttach()
 {
+    // TODO check if there is a connection to server
+
     if (!LoginManager::AutoLogin())
         login = true;// Flag to login
     else
         GetList();
+
 }
 
 void UserInterfaceLayer::OnDetach()
@@ -32,7 +35,9 @@ void UserInterfaceLayer::OnUIRender()
 
     RenderTaskProperties();
 
-    //ImGui::ShowDemoWindow();
+    
+
+    ImGui::ShowDemoWindow();
 }
 
 void UserInterfaceLayer::RenderLogin()
@@ -224,6 +229,28 @@ void UserInterfaceLayer::RenderTaskProperties()
             {
                 OnDescUpdate(m_TODOList.currentSelectedList, m_TODOList.currentSelectedTask);
             }
+
+            // TODO add a time to the date chooser and
+            // fix the the formating of the picker, it overlaps or does not fit
+            ImGui::Text("Due Date");
+            if (ImGui::DateChooser("###", m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[m_TODOList.currentSelectedTask].Date))
+            {
+                // TODO prevent from being in the past
+                // TODO update date chooser to use chrono
+                nlohmann::json jsonPayload;
+                jsonPayload["email"] = LoginManager::UserData.Email;
+                jsonPayload["id"] = LoginManager::UserData.gID;
+                jsonPayload["list"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].Name;
+                jsonPayload["name"] = m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[m_TODOList.currentSelectedTask].Name;
+
+                char buffer[80];
+                strftime(buffer, sizeof(buffer), "%y-%m-%d", &m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[m_TODOList.currentSelectedTask].Date);
+                std::string date{ buffer };
+                jsonPayload["date"] = date;
+
+                HTTPRequest::PATCH(m_URL + "/updateTaskDate", jsonPayload.dump());
+                // TODO error check
+            }
         }
         ImGui::End();
     }
@@ -277,9 +304,15 @@ void UserInterfaceLayer::GetList()
             {
                 for (const auto& task : data["tasks"])
                 {
-                    Task newTask(task["taskName"].get<std::string>());
+                    std::string name = task["taskName"].get<std::string>();
+                    Task newTask(name);
                     newTask.Complete = task["complete"];
                     newTask.TaskDesc = task["taskDescription"];
+
+                    std::string date = task["dueDate"];
+                    std::istringstream ss(date);
+                    ss >> std::get_time(&newTask.Date, "%Y-%m-%d");
+
                     list.TaskVector.push_back(newTask);
                 }
             }

@@ -16,7 +16,7 @@ public:
 	static std::string GET(const std::string& url, const std::string postFields = "", const std::string& token = "");
 	static std::string POST(const std::string& url, const std::string postFields = "");
 	static std::string DELETEex(const std::string& url, const std::string postFields = "");
-	static void PATCH(const std::string& url, const std::string postFields = ""); // TODO Add json for error checking
+	static void PATCH(const std::string& url, const std::string postFields); // TODO Add json for error checking
 
 };
 

@@ -2,16 +2,20 @@
 
 #include <string>
 #include <vector>
+#include "ImguiAddons/imguidatechooser.h"
 
 struct Task
 {
 	Task(std::string& name) : Name(name)
 	{
+		ImGui::SetDateToday(&Date);
 	}
 
 	std::string Name{ "" };
 	std::string TaskDesc{ "" };
 	bool Complete{ false };
+	tm Date;
+	
 };
 
 struct TODOList
