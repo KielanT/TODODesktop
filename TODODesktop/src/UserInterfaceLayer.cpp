@@ -34,10 +34,8 @@ void UserInterfaceLayer::OnUIRender()
     RenderTask();
 
     RenderTaskProperties();
-
     
-
-    ImGui::ShowDemoWindow();
+    //ImGui::ShowDemoWindow();
 }
 
 void UserInterfaceLayer::RenderLogin()
@@ -79,12 +77,21 @@ void UserInterfaceLayer::RenderLogin()
             if (IsFirstTimeLogin)
             {
                 titleText = "Welcome " + LoginManager::UserData.Name;
-                CreateUser();
+                static bool callOnce = true;
+                if (callOnce)
+                {
+                    CreateUser();
+                }
             }
             else
             {
                 titleText = "Welcome back " + LoginManager::UserData.Name;
-                GetList();
+                static bool callOnce = true;
+                if (callOnce)
+                {
+                    GetList();
+                    callOnce = false;
+                }
             }
         }
 
@@ -172,7 +179,7 @@ void UserInterfaceLayer::RenderTask()
                 ImGui::SameLine();
 
                 const bool isSelected = (m_TODOList.currentSelectedTask == n);
-                if (ImGui::Selectable(m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[n].Name.c_str(), isSelected)) // TODO make a list item with checkbox
+                if (ImGui::Selectable(m_TODOList.ListVector[m_TODOList.currentSelectedList].TaskVector[n].Name.c_str(), isSelected))
                     m_TODOList.currentSelectedTask = n;
 
                 if (ImGui::BeginPopupContextItem())
@@ -263,7 +270,7 @@ bool UserInterfaceLayer::IsFirstTime()
 {
     nlohmann::json jsonPayload;
     jsonPayload["gID"] = LoginManager::UserData.gID;
-    std::string response = HTTPRequest::GET(m_URL + "/doesUserExist", jsonPayload.dump());
+    std::string response = HTTPRequest::GET(m_URL + "/doesUserExist?gID=" + LoginManager::UserData.gID);
     // TODO use response for error check 
 
     nlohmann::json json = nlohmann::json::parse(response);
@@ -291,7 +298,7 @@ void UserInterfaceLayer::GetList()
     nlohmann::json jsonPayload;
     jsonPayload["email"] = LoginManager::UserData.Email;
     jsonPayload["id"] = LoginManager::UserData.gID;
-    std::string response = HTTPRequest::GET(m_URL + "/getLists", jsonPayload.dump());
+    std::string response = HTTPRequest::POST(m_URL + "/getLists", jsonPayload.dump());
     // TODO check
     nlohmann::json json = nlohmann::json::parse(response);
     if (json.contains("list"))
@@ -312,6 +319,8 @@ void UserInterfaceLayer::GetList()
                     std::string date = task["dueDate"];
                     std::istringstream ss(date);
                     ss >> std::get_time(&newTask.Date, "%Y-%m-%d");
+
+                    // TODO Check time
 
                     list.TaskVector.push_back(newTask);
                 }
