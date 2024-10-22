@@ -1,5 +1,5 @@
 # TODO List Project: Desktop front end
-- Server: link here:
+- Server: https://github.com/KielanT/TODOServer
 - Web app: link here
 
 ## Description
