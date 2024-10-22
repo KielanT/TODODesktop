@@ -1,6 +1,9 @@
 # TODO List Project: Desktop front end
 - Server: https://github.com/KielanT/TODOServer
-- Web app: link here
+- Web app: https://github.com/KielanT/TODOWeb
+
+![image](https://github.com/user-attachments/assets/363a308b-5cc3-478e-a6d0-c24fba8cfd2a)
+
 
 ## Description
 TODO Desktop is a C++ desktop application that allows users to create and manage to-do lists and tasks. These tasks are stored on a C++ server with a MySQL database, which can be found in the link above. The desktop app communicates with the server via HTTP requests to retrieve, update, and manage the user's to-do lists and tasks.
